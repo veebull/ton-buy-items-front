@@ -34,6 +34,7 @@ export function WalletConnect() {
     isConnected: isEvmConnected,
     isConnecting: isEvmConnecting,
   } = useAccount();
+  console.log('isEvmConnecting', isEvmConnecting);
   const chainId = useChainId();
   const config = useConfig();
   const [tonConnector] = useTonConnectUI();

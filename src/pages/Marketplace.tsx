@@ -1,6 +1,4 @@
-import { Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NFTSection } from '@/components/marketplace/NFTSection';
 import { SBTSection } from '@/components/marketplace/SBTSection';
