@@ -18,4 +18,10 @@ export default defineConfig({
       include: [/@ton\/ton/, /node_modules/],
     },
   },
+  server: {
+    https: {}, // Enable HTTPS in development
+  },
+  preview: {
+    https: {}, // Enable HTTPS in preview mode
+  },
 });
