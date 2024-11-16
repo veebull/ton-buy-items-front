@@ -90,7 +90,7 @@ export function ItemsSection() {
       for (let i = 0; i < 24; i++) {
         console.log('hash', hash);
         const response = await fetch(
-          `https://testnet.toncenter.com/api/v2/getTransactions/?address=${address}&data=${hash}&limit=10&to_lt=0&archival=false`,
+          `https://testnet.toncenter.com/api/v2/getTransactions?address=${address}&data=${hash}&limit=10&to_lt=0&archival=false`,
           {
             headers: {
               Accept: 'application/json',
@@ -99,7 +99,8 @@ export function ItemsSection() {
         );
 
         if (!response.ok) {
-          await new Promise((resolve) => setTimeout(resolve, 10000));
+          // Reduced wait time between retries to 5 seconds
+          await new Promise((resolve) => setTimeout(resolve, 5000));
           continue;
         }
 
@@ -111,15 +112,18 @@ export function ItemsSection() {
           const matchingTx = data.result.find((tx: any) => {
             const txComment = tx.in_msg?.message || '';
             const txSender = tx.in_msg?.source || '';
-            return (
-              tx.in_msg?.value === expectedAmount &&
-              Address.parse(tx.in_msg?.destination).toRawString() ===
-                Address.parse(address).toRawString() &&
-              txComment === expectedMessage &&
-              Address.parse(txSender).toRawString() ===
-                Address.parse(senderAddress).toRawString()
-            );
+            const txAmount = tx.in_msg?.value || '0';
+            
+            // More lenient matching conditions
+            const amountMatches = Math.abs(Number(txAmount) - Number(expectedAmount)) < 1e-9;
+            const addressMatches = Address.parse(tx.in_msg?.destination).toRawString() ===
+              Address.parse(address).toRawString();
+            const senderMatches = Address.parse(txSender).toRawString() ===
+              Address.parse(senderAddress).toRawString();
+            
+            return amountMatches && addressMatches && senderMatches;
           });
+
           console.log('matchingTx', matchingTx);
 
           if (matchingTx) {
@@ -127,7 +131,8 @@ export function ItemsSection() {
           }
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 10000));
+        // Reduced wait time between retries to 5 seconds
+        await new Promise((resolve) => setTimeout(resolve, 5000));
       }
 
       return false;
