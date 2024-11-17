@@ -5,6 +5,8 @@ import { Minus, Plus } from 'lucide-react';
 import { useTonConnectUI } from '@tonconnect/ui-react';
 import { Address, beginCell, toNano } from '@ton/ton';
 import { useToast } from '@/hooks/use-toast';
+import { useTelegram } from '@/hooks/useTelegram';
+import { createStarsPayment } from '@/api/create-stars-payment';
 
 // Define interface for inventory
 interface Inventory {
@@ -44,6 +46,26 @@ const items = [
     },
     quantity: 0,
   },
+  {
+    name: 'TON Jetton',
+    icon: '🪙',
+    price: {
+      ton: 0.1,
+      stars: 1000,
+      eth: 0.01,
+    },
+    quantity: 0,
+  },
+  {
+    name: 'ETH Token',
+    icon: '💫',
+    price: {
+      ton: 0.2,
+      stars: 2000,
+      eth: 0.02,
+    },
+    quantity: 0,
+  },
 ];
 
 export function ItemsSection() {
@@ -58,6 +80,7 @@ export function ItemsSection() {
   });
   const [tonConnector] = useTonConnectUI();
   const { toast } = useToast();
+  const { telegram } = useTelegram();
 
   // Save inventory to localStorage whenever it changes
   useEffect(() => {
@@ -113,14 +136,17 @@ export function ItemsSection() {
             const txComment = tx.in_msg?.message || '';
             const txSender = tx.in_msg?.source || '';
             const txAmount = tx.in_msg?.value || '0';
-            
+
             // More lenient matching conditions
-            const amountMatches = Math.abs(Number(txAmount) - Number(expectedAmount)) < 1e-9;
-            const addressMatches = Address.parse(tx.in_msg?.destination).toRawString() ===
+            const amountMatches =
+              Math.abs(Number(txAmount) - Number(expectedAmount)) < 1e-9;
+            const addressMatches =
+              Address.parse(tx.in_msg?.destination).toRawString() ===
               Address.parse(address).toRawString();
-            const senderMatches = Address.parse(txSender).toRawString() ===
+            const senderMatches =
+              Address.parse(txSender).toRawString() ===
               Address.parse(senderAddress).toRawString();
-            
+
             return amountMatches && addressMatches && senderMatches;
           });
 
@@ -247,6 +273,137 @@ export function ItemsSection() {
     }
   };
 
+  const handleStarsPurchase = async (
+    item: (typeof items)[0],
+    quantity: number
+  ) => {
+    try {
+      // Calculate total stars cost
+      const totalStars = item.price.stars * quantity;
+
+      // Create invoice parameters
+      const invoiceParams = {
+        title: `${quantity}x ${item.name}`,
+        description: `Purchase ${quantity} ${item.name} for ${totalStars} Stars`,
+        currency: 'XTR', // XTR is the currency code for Telegram Stars
+        prices: [
+          {
+            label: `${quantity}x ${item.name}`,
+            amount: totalStars, // Amount in smallest units (1 Star = 100 units)
+          },
+        ],
+        payload: JSON.stringify({
+          type: 'stars_purchase',
+          item_name: item.name,
+          quantity: quantity,
+          timestamp: Date.now(),
+        }),
+        start_parameter: 'stars_payment',
+        need_name: false,
+        need_phone_number: false,
+        need_email: false,
+        need_shipping_address: false,
+        is_flexible: false,
+        photo_url: item.icon
+          ? `https://png.pngtree.com/png-vector/20191027/ourmid/pngtree-green-lawn-grass-icon-vector-design-template-isolated-on-white-background-png-image_1864295.jpg`
+          : undefined,
+        max_tip_amount: 0,
+        suggested_tip_amounts: [],
+        send_email_to_provider: false,
+        send_phone_to_provider: false,
+      };
+
+      // If we're in Telegram environment, use direct payment
+      if (telegram?.WebApp) {
+        try {
+          // Get invoice link from backend
+          console.log('Sending invoice params to backend:', invoiceParams);
+          const invoiceUrl = await createStarsPayment(invoiceParams);
+          // const invoiceUrl =
+          //   'https://t.me/$xhTEubytyUm0DQAANlVM05JpskI';
+          // console.log('invoiceUrl', invoiceUrl);
+
+          // Open Telegram payment modal with the received URL
+          const result = await telegram.WebApp.openInvoice(invoiceUrl);
+          console.log('Payment result:', result);
+
+          if (result) {
+            // Payment successful
+            updateInventory(item.name, quantity);
+            toast({
+              title: 'Purchase Successful',
+              description: `Added ${quantity}x ${item.name} to your inventory!`,
+            });
+          }
+        } catch (error) {
+          console.error('Telegram payment error:', error);
+          toast({
+            title: 'Payment Failed',
+            description: 'Failed to process Stars payment',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'Telegram Required',
+          description: 'Stars payments are only available in the Telegram app',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Stars transaction failed:', error);
+      toast({
+        title: 'Transaction Failed',
+        description:
+          error instanceof Error ? error.message : 'Failed to send transaction',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEthPurchase = async (
+    item: (typeof items)[0],
+    quantity: number
+  ) => {
+    if (!tonConnector.connected) {
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your ETH wallet first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Get user's wallet address
+      const userAddress = tonConnector.account?.address;
+      if (!userAddress) {
+        toast({
+          title: 'Error',
+          description: 'Could not get wallet address',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Add implementation for ETH purchase here
+      // This will depend on your specific smart contract implementation
+      toast({
+        title: 'ETH Purchase',
+        description: 'ETH purchase functionality coming soon!',
+        variant: 'warning',
+      });
+    } catch (error) {
+      console.error('ETH transaction failed:', error);
+      toast({
+        title: 'Transaction Failed',
+        description:
+          error instanceof Error ? error.message : 'Failed to send transaction',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
       {items.map((item) => (
@@ -288,11 +445,15 @@ export function ItemsSection() {
               onClick={() => handleTonPurchase(item, buyQuantities[item.name])}
             >
               💎 {(item.price.ton * buyQuantities[item.name]).toFixed(4)} TON
+              {item.name === 'TON Jetton' && ' (Testnet)'}
             </Button>
             <Button
               className='w-full'
               variant='outline'
               disabled={buyQuantities[item.name] === 0}
+              onClick={() =>
+                handleStarsPurchase(item, buyQuantities[item.name])
+              }
             >
               ⭐ {item.price.stars * buyQuantities[item.name]} Stars
             </Button>
@@ -300,8 +461,10 @@ export function ItemsSection() {
               className='w-full'
               variant='outline'
               disabled={buyQuantities[item.name] === 0}
+              onClick={() => handleEthPurchase(item, buyQuantities[item.name])}
             >
               Ξ {(item.price.eth * buyQuantities[item.name]).toFixed(4)} ETH
+              {item.name === 'ETH Token' && ' (Testnet)'}
             </Button>
           </div>
         </Card>

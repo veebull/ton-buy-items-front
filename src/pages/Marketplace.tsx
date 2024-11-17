@@ -63,7 +63,7 @@ export function Marketplace() {
         </TabsList>
         <TabsContent value='items'>
           <ItemsSection />
-        </TabsContent>
+        </TabsContent>,
         <TabsContent value='nft'>
           <NFTSection />
         </TabsContent>
