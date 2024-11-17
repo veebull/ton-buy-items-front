@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, Loader2 } from 'lucide-react';
 import { useTonConnectUI } from '@tonconnect/ui-react';
 import { Address, beginCell, toNano } from '@ton/ton';
 import { useToast } from '@/hooks/use-toast';
@@ -81,6 +81,10 @@ export function ItemsSection() {
   const [tonConnector] = useTonConnectUI();
   const { toast } = useToast();
   const { telegram } = useTelegram();
+  const [loadingPurchase, setLoadingPurchase] = useState<{
+    itemName: string;
+    type: 'ton' | 'stars' | 'eth' | null;
+  }>({ itemName: '', type: null });
 
   // Save inventory to localStorage whenever it changes
   useEffect(() => {
@@ -140,6 +144,7 @@ export function ItemsSection() {
 
         if (data.ok && data.result) {
           // Look through transactions for matching amount, message AND sender
+          console.log('data.result', data.result);
           const matchingTx = data.result.find((tx: any) => {
             const txComment = tx.in_msg?.message || '';
             console.log('txComment', txComment);
@@ -147,6 +152,10 @@ export function ItemsSection() {
             const txAmount = tx.in_msg?.value || '0';
 
             // More lenient matching conditions
+            const messageMatches = txComment === expectedMessage;
+
+            console.log('messageComments', txComment, expectedMessage);
+
             const amountMatches =
               Math.abs(Number(txAmount) - Number(expectedAmount)) < 1e-9;
             const addressMatches =
@@ -156,7 +165,14 @@ export function ItemsSection() {
               Address.parse(txSender).toRawString() ===
               Address.parse(senderAddress).toRawString();
 
-            return amountMatches && addressMatches && senderMatches;
+            console.log('Matching conditions:', {
+              messageMatches,
+              amountMatches,
+              addressMatches,
+              senderMatches,
+            });
+
+            return messageMatches && addressMatches && senderMatches;
           });
 
           console.log('matchingTx', matchingTx);
@@ -188,6 +204,7 @@ export function ItemsSection() {
     item: (typeof items)[0],
     quantity: number
   ) => {
+    setLoadingPurchase({ itemName: item.name, type: 'ton' });
     if (!tonConnector.connected) {
       toast({
         title: 'Wallet Not Connected',
@@ -279,6 +296,8 @@ export function ItemsSection() {
           error instanceof Error ? error.message : 'Failed to send transaction',
         variant: 'destructive',
       });
+    } finally {
+      setLoadingPurchase({ itemName: '', type: null });
     }
   };
 
@@ -286,6 +305,7 @@ export function ItemsSection() {
     item: (typeof items)[0],
     quantity: number
   ) => {
+    setLoadingPurchase({ itemName: item.name, type: 'stars' });
     try {
       // Calculate total stars cost
       const totalStars = item.price.stars * quantity;
@@ -371,6 +391,8 @@ export function ItemsSection() {
           error instanceof Error ? error.message : 'Failed to send transaction',
         variant: 'destructive',
       });
+    } finally {
+      setLoadingPurchase({ itemName: '', type: null });
     }
   };
 
@@ -378,6 +400,7 @@ export function ItemsSection() {
     item: (typeof items)[0],
     quantity: number
   ) => {
+    setLoadingPurchase({ itemName: item.name, type: 'eth' });
     console.log('handleEthPurchase', item, quantity);
     if (!tonConnector.connected) {
       toast({
@@ -415,6 +438,8 @@ export function ItemsSection() {
           error instanceof Error ? error.message : 'Failed to send transaction',
         variant: 'destructive',
       });
+    } finally {
+      setLoadingPurchase({ itemName: '', type: null });
     }
   };
 
@@ -455,29 +480,36 @@ export function ItemsSection() {
             <Button
               className='w-full'
               variant='outline'
-              disabled={buyQuantities[item.name] === 0}
+              disabled={buyQuantities[item.name] === 0 || (loadingPurchase.itemName === item.name && loadingPurchase.type === 'ton')}
               onClick={() => handleTonPurchase(item, buyQuantities[item.name])}
             >
-              💎 {(item.price.ton * buyQuantities[item.name]).toFixed(4)} TON
+              {loadingPurchase.itemName === item.name && loadingPurchase.type === 'ton' ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : '💎'}{' '}
+              {(item.price.ton * buyQuantities[item.name]).toFixed(4)} TON
               {item.name === 'TON Jetton' && ' (Testnet)'}
             </Button>
             <Button
               className='w-full'
               variant='outline'
-              disabled={buyQuantities[item.name] === 0}
-              onClick={() =>
-                handleStarsPurchase(item, buyQuantities[item.name])
-              }
+              disabled={buyQuantities[item.name] === 0 || (loadingPurchase.itemName === item.name && loadingPurchase.type === 'stars')}
+              onClick={() => handleStarsPurchase(item, buyQuantities[item.name])}
             >
-              ⭐ {item.price.stars * buyQuantities[item.name]} Stars
+              {loadingPurchase.itemName === item.name && loadingPurchase.type === 'stars' ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : '⭐'}{' '}
+              {item.price.stars * buyQuantities[item.name]} Stars
             </Button>
             <Button
               className='w-full'
               variant='outline'
-              disabled={buyQuantities[item.name] === 0}
+              disabled={buyQuantities[item.name] === 0 || (loadingPurchase.itemName === item.name && loadingPurchase.type === 'eth')}
               onClick={() => handleEthPurchase(item, buyQuantities[item.name])}
             >
-              Ξ {(item.price.eth * buyQuantities[item.name]).toFixed(4)} ETH
+              {loadingPurchase.itemName === item.name && loadingPurchase.type === 'eth' ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : 'Ξ'}{' '}
+              {(item.price.eth * buyQuantities[item.name]).toFixed(4)} ETH
               {item.name === 'ETH Token' && ' (Testnet)'}
             </Button>
           </div>
