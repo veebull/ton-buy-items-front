@@ -200,11 +200,7 @@ export function ItemsSection() {
     }));
   };
 
-  const handleTonPurchase = async (
-    item: (typeof items)[0],
-    quantity: number
-  ) => {
-    setLoadingPurchase({ itemName: item.name, type: 'ton' });
+  const handleTonPurchase = async (item: (typeof items)[0], quantity: number) => {
     if (!tonConnector.connected) {
       toast({
         title: 'Wallet Not Connected',
@@ -214,6 +210,7 @@ export function ItemsSection() {
       return;
     }
 
+    setLoadingPurchase({ itemName: item.name, type: 'ton' });
     try {
       // Get user's wallet address
       const userAddress = tonConnector.account?.address;
@@ -292,8 +289,7 @@ export function ItemsSection() {
       console.error('Transaction failed:', error);
       toast({
         title: 'Transaction Failed',
-        description:
-          error instanceof Error ? error.message : 'Failed to send transaction',
+        description: error instanceof Error ? error.message : 'Failed to send transaction',
         variant: 'destructive',
       });
     } finally {
@@ -301,10 +297,17 @@ export function ItemsSection() {
     }
   };
 
-  const handleStarsPurchase = async (
-    item: (typeof items)[0],
-    quantity: number
-  ) => {
+  const handleStarsPurchase = async (item: (typeof items)[0], quantity: number) => {
+    // Only set loading if we're in Telegram WebApp
+    if (!telegram?.WebApp) {
+      toast({
+        title: 'Telegram Required',
+        description: 'Stars payments are only available in the Telegram app',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoadingPurchase({ itemName: item.name, type: 'stars' });
     try {
       // Calculate total stars cost
@@ -342,57 +345,40 @@ export function ItemsSection() {
         send_phone_to_provider: false,
       };
 
-      // If we're in Telegram environment, use direct payment
-      if (telegram?.WebApp) {
-        try {
-          // Get invoice link from backend
-          console.log('Sending invoice params to backend:', invoiceParams);
-          const invoiceUrl = await createStarsPayment(invoiceParams);
-          // const invoiceUrl =
-          //   'https://t.me/$xhTEubytyUm0DQAANlVM05JpskI';
-          // console.log('invoiceUrl', invoiceUrl);
-
-          // Open Telegram payment modal with the received URL
-          const result = await new Promise<boolean>((resolve) => {
-            telegram.WebApp?.openInvoice(invoiceUrl, function (status: string) {
-              resolve(status === 'paid');
-            });
+      try {
+        const invoiceUrl = await createStarsPayment(invoiceParams);
+        
+        const result = await new Promise<boolean>((resolve) => {
+          telegram.WebApp?.openInvoice(invoiceUrl, function (status: string) {
+            setLoadingPurchase({ itemName: '', type: null }); // Clear loading when modal closes
+            resolve(status === 'paid');
           });
-          console.log('Payment result:', result);
+        });
 
-          if (result) {
-            // Payment successful
-            updateInventory(item.name, quantity);
-            toast({
-              title: 'Purchase Successful',
-              description: `Added ${quantity}x ${item.name} to your inventory!`,
-            });
-          }
-        } catch (error) {
-          console.error('Telegram payment error:', error);
+        if (result) {
+          updateInventory(item.name, quantity);
           toast({
-            title: 'Payment Failed',
-            description: 'Failed to process Stars payment',
-            variant: 'destructive',
+            title: 'Purchase Successful',
+            description: `Added ${quantity}x ${item.name} to your inventory!`,
           });
         }
-      } else {
+      } catch (error) {
+        console.error('Telegram payment error:', error);
         toast({
-          title: 'Telegram Required',
-          description: 'Stars payments are only available in the Telegram app',
+          title: 'Payment Failed',
+          description: 'Failed to process Stars payment',
           variant: 'destructive',
         });
+        setLoadingPurchase({ itemName: '', type: null }); // Clear loading on error
       }
     } catch (error) {
       console.error('Stars transaction failed:', error);
       toast({
         title: 'Transaction Failed',
-        description:
-          error instanceof Error ? error.message : 'Failed to send transaction',
+        description: error instanceof Error ? error.message : 'Failed to send transaction',
         variant: 'destructive',
       });
-    } finally {
-      setLoadingPurchase({ itemName: '', type: null });
+      setLoadingPurchase({ itemName: '', type: null }); // Clear loading on error
     }
   };
 
