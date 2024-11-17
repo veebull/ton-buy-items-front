@@ -108,6 +108,14 @@ export function ItemsSection() {
     expectedMessage: string,
     senderAddress: string
   ) => {
+    console.log(
+      'checkTransactionStatus',
+      address,
+      hash,
+      expectedAmount,
+      expectedMessage,
+      senderAddress
+    );
     try {
       // Try for up to 2 minutes (24 attempts, 5 seconds apart)
       for (let i = 0; i < 24; i++) {
@@ -134,6 +142,7 @@ export function ItemsSection() {
           // Look through transactions for matching amount, message AND sender
           const matchingTx = data.result.find((tx: any) => {
             const txComment = tx.in_msg?.message || '';
+            console.log('txComment', txComment);
             const txSender = tx.in_msg?.source || '';
             const txAmount = tx.in_msg?.value || '0';
 
@@ -324,7 +333,11 @@ export function ItemsSection() {
           // console.log('invoiceUrl', invoiceUrl);
 
           // Open Telegram payment modal with the received URL
-          const result = await telegram.WebApp.openInvoice(invoiceUrl);
+          const result = await new Promise<boolean>((resolve) => {
+            telegram.WebApp?.openInvoice(invoiceUrl, function (status: string) {
+              resolve(status === 'paid');
+            });
+          });
           console.log('Payment result:', result);
 
           if (result) {
@@ -365,6 +378,7 @@ export function ItemsSection() {
     item: (typeof items)[0],
     quantity: number
   ) => {
+    console.log('handleEthPurchase', item, quantity);
     if (!tonConnector.connected) {
       toast({
         title: 'Wallet Not Connected',

@@ -10,32 +10,32 @@ interface TelegramWebApp {
   WebApp?: {
     // Payment methods
     openInvoice: (url: string, callback?: (status: string) => void) => void;
-    
+
     // User info
     initData: string;
     initDataUnsafe: {
       user?: TelegramWebAppUser;
       start_param?: string;
     };
-    
+
     // Platform info
     platform: string;
     colorScheme: 'light' | 'dark';
-    
+
     // UI methods
     ready: () => void;
     expand: () => void;
     close: () => void;
     isExpanded: boolean;
-    
+
     // Viewport info
     viewportHeight: number;
     viewportStableHeight: number;
-    
+
     // Event handlers
     onEvent: (eventType: string, eventHandler: () => void) => void;
     offEvent: (eventType: string, eventHandler: () => void) => void;
-    
+
     // Theme
     themeParams: {
       bg_color?: string;
@@ -58,32 +58,35 @@ export function useTelegram() {
   const telegram = window.Telegram;
   const webApp = telegram?.WebApp;
   const isTelegramWebApp = !!webApp;
-  
+
   // Get current user if available
   const user = webApp?.initDataUnsafe?.user;
-  
+
   // Check if we're running in Telegram
   const isInTelegram = isTelegramWebApp && !!webApp.initData;
-  
+
   // Get platform info
   const platform = webApp?.platform || 'unknown';
   const colorScheme = webApp?.colorScheme || 'light';
-  
+
   // Utility functions
   const expandWebApp = () => {
     webApp?.expand();
   };
-  
+
   const closeWebApp = () => {
     webApp?.close();
   };
-  
+
   const readyWebApp = () => {
     webApp?.ready();
   };
-  
+
   // Payment function
-  const openInvoice = async (url: string, callback?: (status: string) => void) => {
+  const openInvoice = async (
+    url: string,
+    callback?: (status: string) => void
+  ) => {
     if (!webApp?.openInvoice) {
       throw new Error('Telegram WebApp payments are not available');
     }
@@ -104,4 +107,4 @@ export function useTelegram() {
     readyWebApp,
     openInvoice,
   };
-} 
+}
