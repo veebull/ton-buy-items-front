@@ -200,7 +200,10 @@ export function ItemsSection() {
     }));
   };
 
-  const handleTonPurchase = async (item: (typeof items)[0], quantity: number) => {
+  const handleTonPurchase = async (
+    item: (typeof items)[0],
+    quantity: number
+  ) => {
     if (!tonConnector.connected) {
       toast({
         title: 'Wallet Not Connected',
@@ -289,7 +292,8 @@ export function ItemsSection() {
       console.error('Transaction failed:', error);
       toast({
         title: 'Transaction Failed',
-        description: error instanceof Error ? error.message : 'Failed to send transaction',
+        description:
+          error instanceof Error ? error.message : 'Failed to send transaction',
         variant: 'destructive',
       });
     } finally {
@@ -297,7 +301,10 @@ export function ItemsSection() {
     }
   };
 
-  const handleStarsPurchase = async (item: (typeof items)[0], quantity: number) => {
+  const handleStarsPurchase = async (
+    item: (typeof items)[0],
+    quantity: number
+  ) => {
     // Only set loading if we're in Telegram WebApp
     if (!telegram?.WebApp) {
       toast({
@@ -312,7 +319,9 @@ export function ItemsSection() {
     try {
       // Calculate total stars cost
       const totalStars = item.price.stars * quantity;
-
+      console.log('totalStars', totalStars);
+      console.log('item.price.stars', item.price.stars);
+      console.log('quantity', quantity);
       // Create invoice parameters
       const invoiceParams = {
         title: `${quantity}x ${item.name}`,
@@ -347,7 +356,7 @@ export function ItemsSection() {
 
       try {
         const invoiceUrl = await createStarsPayment(invoiceParams);
-        
+
         const result = await new Promise<boolean>((resolve) => {
           telegram.WebApp?.openInvoice(invoiceUrl, function (status: string) {
             setLoadingPurchase({ itemName: '', type: null }); // Clear loading when modal closes
@@ -375,7 +384,8 @@ export function ItemsSection() {
       console.error('Stars transaction failed:', error);
       toast({
         title: 'Transaction Failed',
-        description: error instanceof Error ? error.message : 'Failed to send transaction',
+        description:
+          error instanceof Error ? error.message : 'Failed to send transaction',
         variant: 'destructive',
       });
       setLoadingPurchase({ itemName: '', type: null }); // Clear loading on error
@@ -466,35 +476,58 @@ export function ItemsSection() {
             <Button
               className='w-full'
               variant='outline'
-              disabled={buyQuantities[item.name] === 0 || (loadingPurchase.itemName === item.name && loadingPurchase.type === 'ton')}
+              disabled={
+                buyQuantities[item.name] === 0 ||
+                (loadingPurchase.itemName === item.name &&
+                  loadingPurchase.type === 'ton')
+              }
               onClick={() => handleTonPurchase(item, buyQuantities[item.name])}
             >
-              {loadingPurchase.itemName === item.name && loadingPurchase.type === 'ton' ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : '💎'}{' '}
+              {loadingPurchase.itemName === item.name &&
+              loadingPurchase.type === 'ton' ? (
+                <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+              ) : (
+                '💎'
+              )}{' '}
               {(item.price.ton * buyQuantities[item.name]).toFixed(4)} TON
               {item.name === 'TON Jetton' && ' (Testnet)'}
             </Button>
             <Button
               className='w-full'
               variant='outline'
-              disabled={buyQuantities[item.name] === 0 || (loadingPurchase.itemName === item.name && loadingPurchase.type === 'stars')}
-              onClick={() => handleStarsPurchase(item, buyQuantities[item.name])}
+              disabled={
+                buyQuantities[item.name] === 0 ||
+                (loadingPurchase.itemName === item.name &&
+                  loadingPurchase.type === 'stars')
+              }
+              onClick={() =>
+                handleStarsPurchase(item, buyQuantities[item.name])
+              }
             >
-              {loadingPurchase.itemName === item.name && loadingPurchase.type === 'stars' ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : '⭐'}{' '}
+              {loadingPurchase.itemName === item.name &&
+              loadingPurchase.type === 'stars' ? (
+                <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+              ) : (
+                '⭐'
+              )}{' '}
               {item.price.stars * buyQuantities[item.name]} Stars
             </Button>
             <Button
               className='w-full'
               variant='outline'
-              disabled={buyQuantities[item.name] === 0 || (loadingPurchase.itemName === item.name && loadingPurchase.type === 'eth')}
+              disabled={
+                buyQuantities[item.name] === 0 ||
+                (loadingPurchase.itemName === item.name &&
+                  loadingPurchase.type === 'eth')
+              }
               onClick={() => handleEthPurchase(item, buyQuantities[item.name])}
             >
-              {loadingPurchase.itemName === item.name && loadingPurchase.type === 'eth' ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : 'Ξ'}{' '}
+              {loadingPurchase.itemName === item.name &&
+              loadingPurchase.type === 'eth' ? (
+                <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+              ) : (
+                'Ξ'
+              )}{' '}
               {(item.price.eth * buyQuantities[item.name]).toFixed(4)} ETH
               {item.name === 'ETH Token' && ' (Testnet)'}
             </Button>

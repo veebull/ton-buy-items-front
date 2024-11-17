@@ -21,7 +21,7 @@ export async function createStarsPayment(invoiceParams: any) {
       ...invoiceParams,
       prices: invoiceParams.prices.map((price: any) => ({
         label: price.label,
-        amount: Math.round(price.amount * 100),
+        amount: price.amount,
       })),
       payload: String(Date.now()),
     };
